@@ -9,6 +9,10 @@
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
 #include <sensor_msgs/CameraInfo.h>
+#include "geometry_msgs/PoseStamped.h"
+#include "ros/ros.h"
+#include "std_msgs/Float64.h"
+#include "std_msgs/String.h"
 
 /** \brief Simple Image Processor
  *
@@ -30,6 +34,7 @@ class RosImgProcessorNode
 
         //publishers
         image_transport::Publisher image_pub_;
+        ros::Publisher ray_direction_circle = nh_.advertise<geometry_msgs::PoseStamped>("pose", 1);
 
         //pointer to received (in) and published (out) images
         cv_bridge::CvImagePtr cv_img_ptr_in_;
@@ -37,6 +42,11 @@ class RosImgProcessorNode
 
 		//Camera matrix
 		cv::Mat matrixP_;
+    cv::Mat matrixK_;
+    cv::Mat matrixKinv_;
+
+    //Ray Direction
+    cv::Mat RayDirection = (cv::Mat_<double>(3,1) << 0,0,0);
 
         //image encoding label
         std::string img_encoding_;
