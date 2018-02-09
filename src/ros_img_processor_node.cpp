@@ -7,6 +7,18 @@
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
 
+
+
+//constants
+const int GAUSSIAN_BLUR_SIZE = 7;
+const double GAUSSIAN_BLUR_SIGMA = 2;
+const double CANNY_EDGE_TH = 150;
+const double HOUGH_ACCUM_RESOLUTION = 2;
+const double MIN_CIRCLE_DIST = 40;
+const double HOUGH_ACCUM_TH = 70;
+const int MIN_RADIUS = 20;
+const int MAX_RADIUS = 100;
+
 RosImgProcessorNode::RosImgProcessorNode() :
     nh_(ros::this_node::getName()),
     img_tp_(nh_)
@@ -27,17 +39,6 @@ RosImgProcessorNode::~RosImgProcessorNode()
     //
 }
 
-
-//constants
-const int GAUSSIAN_BLUR_SIZE = 7;
-const double GAUSSIAN_BLUR_SIGMA = 2;
-const double CANNY_EDGE_TH = 150;
-const double HOUGH_ACCUM_RESOLUTION = 2;
-const double MIN_CIRCLE_DIST = 40;
-const double HOUGH_ACCUM_TH = 70;
-const int MIN_RADIUS = 20;
-const int MAX_RADIUS = 100;
-
 void RosImgProcessorNode::process()
 {
     cv::Rect_<int> box;
@@ -50,6 +51,9 @@ void RosImgProcessorNode::process()
     std::vector<cv::Vec3f> circles;
     cv::Point center;
     int radius;
+    double center_x = 640/2;
+    double center_y = 480/2;
+    cv::Point centerp = cv::Point(center_x, center_y);
 
     //check if new image is there
     if ( cv_img_ptr_in_ != nullptr )
@@ -62,11 +66,9 @@ void RosImgProcessorNode::process()
     circles.clear();
 
     // If input image is RGB, convert it to gray
-    cv::cvtColor(image, gray_image, CV_BGR2GRAY);
-
+    cv::cvtColor(cv_img_out_.image, gray_image, CV_BGR2GRAY);
     //Reduce the noise so we avoid false circle detection
     cv::GaussianBlur( gray_image, gray_image, cv::Size(GAUSSIAN_BLUR_SIZE, GAUSSIAN_BLUR_SIZE), GAUSSIAN_BLUR_SIGMA );
-
     //Apply the Hough Transform to find the circles
     cv::HoughCircles( gray_image, circles, CV_HOUGH_GRADIENT, HOUGH_ACCUM_RESOLUTION, MIN_CIRCLE_DIST, CANNY_EDGE_TH, HOUGH_ACCUM_TH, MIN_RADIUS, MAX_RADIUS );
 
@@ -77,22 +79,17 @@ void RosImgProcessorNode::process()
         {
                 center = cv::Point(cvRound(circles[ii][0]), cvRound(circles[ii][1]));
                 radius = cvRound(circles[ii][2]);
-                cv::circle(image, center, 5, cv::Scalar(0,0,255), -1, 8, 0 );// circle center in green
-                cv::circle(image, center, radius, cv::Scalar(0,0,255), 3, 8, 0 );// circle perimeter in red
+                cv::circle(cv_img_out_.image, center, 5, cv::Scalar(0,0,255), -1, 8, 0 );// circle center in green
+                cv::circle(cv_img_out_.image, center, radius, cv::Scalar(0,0,255), 3, 8, 0 );// circle perimeter in red
+                cv::line(cv_img_out_.image,centerp,center,cv::Scalar(0,0,255), 8); //linea
                 cv::Mat centerPoint = (cv::Mat_<double>(3,1) << cvRound(circles[ii][0]), cvRound(circles[ii][1]), 1.0);
                 RayDirection = matrixKinv_ * centerPoint;
+                std::cout <<"Ray Director"<< RayDirection << std::endl;
+
         }
-}
+      }
 
-		//find the direction vector
-		//TODO
 
-        //sets and draw a bounding box around the ball
-        box.x = (cv_img_ptr_in_->image.cols/2)-10;
-        box.y = (cv_img_ptr_in_->image.rows/2)-10;
-        box.width = 20;
-        box.height = 20;
-        cv::rectangle(cv_img_out_.image, box, cv::Scalar(0,255,255), 3);
     }
 
     //reset input image
